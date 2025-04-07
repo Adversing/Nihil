@@ -215,7 +215,8 @@ public class NihilImpl implements Nihil {
         );
     }
 
-    private String capitalizeFirstLetter(String input) { // this should be moved to a utility class
+    // this should be moved to a utility class
+    private String capitalizeFirstLetter(String input) {
         if (input == null || input.isEmpty()) {
             return input;
         }
@@ -325,7 +326,7 @@ public class NihilImpl implements Nihil {
         @Override
         public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
             String methodName = method.getName();
-            // Object-inherited methods are not intercepted
+            // object-inherited methods are not intercepted
             if (methodName.equals("equals") || methodName.equals("hashCode") || methodName.equals("toString")) {
                 return method.invoke(target, args);
             }
@@ -374,11 +375,11 @@ public class NihilImpl implements Nihil {
         @SuppressWarnings("unchecked")
         public S createProxy() {
             try {
-                // Create a dynamic proxy that implements all the target's interfaces
+                // create a dynamic proxy that implements all the target's interfaces
                 Class<?>[] interfaces = getAllInterfaces(targetClass);
 
                 if (interfaces.length > 0) {
-                    // If the class implements interfaces, we can use a standard proxy
+                    // if the class implements interfaces, we can use a standard proxy
                     InvocationHandler handler = new SourceObjectInvocationHandler<>(
                             target, transformers, propertyMappings
                     );
@@ -389,7 +390,7 @@ public class NihilImpl implements Nihil {
                             handler
                     );
                 } else {
-                    // For classes without interfaces, we need an advanced approach
+                    // for classes without interfaces, we need an advanced approach
                     return createTransformingDelegate();
                 }
             } catch (Exception e) {
@@ -451,7 +452,6 @@ public class NihilImpl implements Nihil {
             this.delegate = delegate;
             this.transformers = transformers;
 
-            // Pre-compute transformed values
             precomputeTransformedValues();
         }
 
@@ -461,7 +461,7 @@ public class NihilImpl implements Nihil {
         private void precomputeTransformedValues() {
             Class<?> delegateClass = delegate.getClass();
 
-            // Process all getters
+            // process all getters
             Arrays.stream(delegateClass.getMethods())
                     .filter(this::isGetter)
                     .forEach(getter -> {
@@ -479,7 +479,7 @@ public class NihilImpl implements Nihil {
                         }
                     });
 
-            // Also process fields directly if needed
+            // also process fields directly if needed
             Arrays.stream(delegateClass.getDeclaredFields())
                     .forEach(field -> {
                         try {
@@ -493,7 +493,7 @@ public class NihilImpl implements Nihil {
                                 }
                             }
                         } catch (Exception e) {
-                            // Skip on error
+                            // skip on error
                         }
                     });
         }
@@ -509,32 +509,6 @@ public class NihilImpl implements Nihil {
         }
 
         /**
-         * General purpose property accessor that will be used for property access.
-         * This is called via reflection from the updater.
-         *
-         * @param propertyName Property name
-         * @return The property value, possibly transformed
-         */
-        public Object getProperty(String propertyName) {
-            if (transformedValues.containsKey(propertyName)) {
-                return transformedValues.get(propertyName);
-            }
-
-            try {
-                String getterName = "get" + Character.toUpperCase(propertyName.charAt(0)) + propertyName.substring(1);
-                Method getter = delegate.getClass().getMethod(getterName);
-                return getter.invoke(delegate);
-            } catch (Exception e) {
-                try {
-                    Field field = delegate.getClass().getDeclaredField(propertyName);
-                    return ReflectionUtils.getFieldValue(field, delegate);
-                } catch (Exception ex) {
-                    throw new PropertyUpdateException("Cannot access property: " + propertyName, ex);
-                }
-            }
-        }
-
-        /**
          * Checks if a method is a getter.
          *
          * @param method The method to check
@@ -542,6 +516,8 @@ public class NihilImpl implements Nihil {
          */
         private boolean isGetter(Method method) {
             String name = method.getName();
+            // this heuristic is not perfect, but it's good enough for now. It does not work for records datatypes as 
+            // their getters are not prefixed with "get" or "is".
             return (name.startsWith("get") && name.length() > 3 && method.getParameterCount() == 0 &&
                     method.getReturnType() != void.class) ||
                     (name.startsWith("is") && name.length() > 2 && method.getParameterCount() == 0 &&
@@ -555,6 +531,7 @@ public class NihilImpl implements Nihil {
          * @return The property name
          */
         private String extractPropertyName(String methodName) {
+            // the same here
             if (methodName.startsWith("get") && methodName.length() > 3) {
                 return Character.toLowerCase(methodName.charAt(3)) + methodName.substring(4);
             } else if (methodName.startsWith("is") && methodName.length() > 2) {
